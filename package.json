@@ -1,0 +1,14 @@
+{
+  "name": "broadcast-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Real-time message broadcasting platform with a React client and Node.js WebSocket server",
+  "workspaces": [
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=server",
+    "dev:client": "npm run dev --workspace=client"
+  }
+}

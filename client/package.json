@@ -1,0 +1,11 @@
+{
+  "name": "@broadcast-server/client",
+  "version": "0.1.0",
+  "private": true,
+  "description": "React chat client for the Broadcast Server",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  }
+}
