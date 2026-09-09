@@ -1,7 +1,9 @@
 const { WebSocketServer, WebSocket } = require('ws');
+const mongoose = require('mongoose');
 const rooms = require('./rooms');
 const { verifyToken } = require('./auth');
-const { PORT } = require('./config');
+const { saveMessage, recentMessages } = require('./history');
+const { PORT, MONGODB_URI } = require('./config');
 
 const wss = new WebSocketServer({ port: PORT });
 
@@ -53,6 +55,17 @@ wss.on('connection', (socket, request) => {
       }
       rooms.join(socket, room);
 
+      // Late joiner catch-up: replay recent history for this room.
+      recentMessages(room, 50)
+        .then((messages) => {
+          socket.send(
+            JSON.stringify({ type: 'history', room, messages })
+          );
+        })
+        .catch((err) => {
+          console.error('Failed to load history:', err);
+        });
+
       const memberCount = rooms.members(room).size;
       socket.send(
         JSON.stringify({
@@ -83,15 +96,25 @@ wss.on('connection', (socket, request) => {
       return;
     }
 
+    const text = msg.text || '';
+    const username = socket.username;
+    const room = socket.room;
+
+    // Persist before broadcasting so history is never missing a message.
+    saveMessage(room, username, text)
+      .catch((err) => {
+        console.error('Failed to save message:', err);
+      });
+
     const payload = JSON.stringify({
       type: 'message',
-      username: socket.username,
-      text: msg.text || '',
+      username,
+      text,
     });
 
-    console.log(`[${socket.room}] ${socket.username}: ${msg.text}`);
+    console.log(`[${room}] ${username}: ${text}`);
 
-    rooms.members(socket.room).forEach((client) => {
+    rooms.members(room).forEach((client) => {
       if (client !== socket && client.readyState === WebSocket.OPEN) {
         client.send(payload);
       }
@@ -104,4 +127,15 @@ wss.on('connection', (socket, request) => {
   });
 });
 
+async function start() {
+  try {
+    await mongoose.connect(MONGODB_URI);
+    console.log(`Connected to MongoDB at ${MONGODB_URI}`);
+  } catch (err) {
+    console.error('MongoDB connection failed:', err.message);
+    process.exit(1);
+  }
+}
+
+start();
 console.log(`Broadcast server listening on ws://localhost:${PORT}`);
