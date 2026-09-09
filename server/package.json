@@ -4,9 +4,13 @@
   "private": true,
   "description": "WebSocket broadcast server with per-room routing, JWT sessions, and MongoDB message history",
   "main": "src/index.js",
+  "bin": {
+    "broadcast-server": "./src/cli.js"
+  },
   "scripts": {
     "start": "node src/index.js",
-    "dev": "node --watch src/index.js"
+    "dev": "node --watch src/index.js",
+    "cli": "node src/cli.js"
   },
   "dependencies": {
     "jsonwebtoken": "^9.0.3",
