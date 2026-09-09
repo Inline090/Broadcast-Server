@@ -137,5 +137,32 @@ async function start() {
   }
 }
 
+async function shutdown(signal) {
+  console.log(`\n${signal} received. Shutting down gracefully...`);
+
+  // Stop accepting new connections, then close every open client socket.
+  wss.close(() => {
+    console.log('WebSocket server closed.');
+  });
+  for (const client of wss.clients) {
+    client.close(1001, 'Server shutting down');
+  }
+
+  // Close the MongoDB connection before exiting.
+  try {
+    await mongoose.disconnect();
+    console.log('MongoDB connection closed.');
+  } catch (err) {
+    console.error('Error closing MongoDB connection:', err.message);
+  }
+
+  process.exit(0);
+}
+
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+
 start();
 console.log(`Broadcast server listening on ws://localhost:${PORT}`);
+
+module.exports = { shutdown };
