@@ -1,17 +1,36 @@
 const { WebSocketServer, WebSocket } = require('ws');
 const rooms = require('./rooms');
-
-const PORT = process.env.PORT || 8080;
+const { verifyToken } = require('./auth');
+const { PORT } = require('./config');
 
 const wss = new WebSocketServer({ port: PORT });
 
-wss.on('connection', (socket) => {
-  console.log(`Client connected. total=${wss.clients.size}`);
+wss.on('connection', (socket, request) => {
+  // Identity comes from the JWT, never from what the client claims.
+  const token = new URL(request.url, 'http://localhost').searchParams.get('token');
+  if (!token) {
+    socket.send(JSON.stringify({ type: 'error', message: 'token is required' }));
+    socket.close();
+    return;
+  }
+
+  let user;
+  try {
+    user = verifyToken(token);
+  } catch {
+    socket.send(JSON.stringify({ type: 'error', message: 'invalid token' }));
+    socket.close();
+    return;
+  }
+
+  socket.username = user.username;
+  console.log(`Client connected: ${socket.username}. total=${wss.clients.size}`);
 
   socket.send(
     JSON.stringify({
       type: 'welcome',
-      message: 'Connected to Broadcast Server',
+      username: socket.username,
+      message: `Connected to Broadcast Server as ${socket.username}`,
     })
   );
 
@@ -32,7 +51,6 @@ wss.on('connection', (socket) => {
         );
         return;
       }
-      socket.username = msg.username || 'anonymous';
       rooms.join(socket, room);
 
       const memberCount = rooms.members(room).size;
@@ -67,11 +85,11 @@ wss.on('connection', (socket) => {
 
     const payload = JSON.stringify({
       type: 'message',
-      username: msg.username || socket.username || 'anonymous',
+      username: socket.username,
       text: msg.text || '',
     });
 
-    console.log(`[${socket.room}] ${msg.username}: ${msg.text}`);
+    console.log(`[${socket.room}] ${socket.username}: ${msg.text}`);
 
     rooms.members(socket.room).forEach((client) => {
       if (client !== socket && client.readyState === WebSocket.OPEN) {
@@ -82,7 +100,7 @@ wss.on('connection', (socket) => {
 
   socket.on('close', () => {
     rooms.leave(socket);
-    console.log(`Client disconnected. total=${wss.clients.size}`);
+    console.log(`Client disconnected: ${socket.username}. total=${wss.clients.size}`);
   });
 });
 
