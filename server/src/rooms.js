@@ -9,8 +9,19 @@ function join(socket, room) {
   socket.room = room;
 }
 
+function leave(socket) {
+  const room = socket.room;
+  if (room && rooms.has(room)) {
+    rooms.get(room).delete(socket);
+    if (rooms.get(room).size === 0) {
+      rooms.delete(room);
+    }
+  }
+  delete socket.room;
+}
+
 function members(room) {
   return rooms.get(room) || new Set();
 }
 
-module.exports = { join, members };
+module.exports = { join, leave, members };

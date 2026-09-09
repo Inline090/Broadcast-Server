@@ -81,6 +81,7 @@ wss.on('connection', (socket) => {
   });
 
   socket.on('close', () => {
+    rooms.leave(socket);
     console.log(`Client disconnected. total=${wss.clients.size}`);
   });
 });
