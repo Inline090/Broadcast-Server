@@ -3,9 +3,13 @@ const mongoose = require('mongoose');
 const rooms = require('./rooms');
 const { verifyToken } = require('./auth');
 const { saveMessage, recentMessages } = require('./history');
+const { createHttpServer } = require('./httpServer');
 const { PORT, MONGODB_URI } = require('./config');
 
-const wss = new WebSocketServer({ port: PORT });
+// HTTP server handles POST /api/token; the WebSocket server attaches to it so
+// both share one port.
+const server = createHttpServer();
+const wss = new WebSocketServer({ server });
 
 wss.on('connection', (socket, request) => {
   // Identity comes from the JWT, never from what the client claims.
@@ -141,6 +145,9 @@ async function shutdown(signal) {
   console.log(`\n${signal} received. Shutting down gracefully...`);
 
   // Stop accepting new connections, then close every open client socket.
+  server.close(() => {
+    console.log('HTTP server closed.');
+  });
   wss.close(() => {
     console.log('WebSocket server closed.');
   });
@@ -162,7 +169,19 @@ async function shutdown(signal) {
 process.on('SIGINT', () => shutdown('SIGINT'));
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 
+async function start() {
+  try {
+    await mongoose.connect(MONGODB_URI);
+    console.log(`Connected to MongoDB at ${MONGODB_URI}`);
+    server.listen(PORT, () => {
+      console.log(`Broadcast server listening on ws://localhost:${PORT}`);
+    });
+  } catch (err) {
+    console.error('MongoDB connection failed:', err.message);
+    process.exit(1);
+  }
+}
+
 start();
-console.log(`Broadcast server listening on ws://localhost:${PORT}`);
 
 module.exports = { shutdown };
