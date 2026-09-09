@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
 // A single message in a room's history. Indexed by room + createdAt so the
 // "replay recent history" query stays fast as the collection grows.
@@ -8,12 +8,12 @@ const messageSchema = new mongoose.Schema(
     username: { type: String, required: true },
     text: { type: String, required: true },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 messageSchema.index({ room: 1, createdAt: -1 });
 
-const Message = mongoose.model('Message', messageSchema);
+const Message = mongoose.model("Message", messageSchema);
 
 async function saveMessage(room, username, text) {
   return Message.create({ room, username, text });
