@@ -24,4 +24,15 @@ function members(room) {
   return rooms.get(room) || new Set();
 }
 
-module.exports = { join, leave, members };
+// Usernames currently in a room, for the live member list.
+function usernames(room) {
+  const set = rooms.get(room);
+  if (!set) return [];
+  const names = [];
+  set.forEach((socket) => {
+    if (socket.username) names.push(socket.username);
+  });
+  return names;
+}
+
+module.exports = { join, leave, members, usernames };

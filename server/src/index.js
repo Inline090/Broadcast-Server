@@ -6,6 +6,20 @@ const { saveMessage, recentMessages } = require('./history');
 const { createHttpServer } = require('./httpServer');
 const { PORT, MONGODB_URI } = require('./config');
 
+// Tell every socket in a room who is currently present.
+function broadcastMembers(room) {
+  const payload = JSON.stringify({
+    type: 'members',
+    room,
+    usernames: rooms.usernames(room),
+  });
+  rooms.members(room).forEach((client) => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(payload);
+    }
+  });
+}
+
 // HTTP server handles POST /api/token; the WebSocket server attaches to it so
 // both share one port.
 const server = createHttpServer();
@@ -104,6 +118,8 @@ wss.on('connection', (socket) => {
           client.send(payload);
         }
       });
+
+      broadcastMembers(room);
       return;
     }
 
@@ -142,10 +158,14 @@ wss.on('connection', (socket) => {
 
   socket.on('close', () => {
     clearTimeout(authTimeout);
+    const leftRoom = socket.room;
     rooms.leave(socket);
     console.log(
       `Client disconnected: ${socket.username || 'unauthenticated'}. total=${wss.clients.size}`
     );
+    if (leftRoom) {
+      broadcastMembers(leftRoom);
+    }
   });
 });
 
