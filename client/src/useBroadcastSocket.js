@@ -2,9 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 // React hook that manages a WebSocket connection to the broadcast server.
 // Exposes connection status, a send() helper, and every parsed message the
-// server sends (welcome, joined, history, system, chat messages, errors).
+// server sends (welcome, joined, history, members, system, chat, errors).
 export default function useBroadcastSocket({ host, port, token }) {
-  const [status, setStatus] = useState('connecting'); // connecting | open | closed
+  // connecting -> authenticating -> open, or closed
+  const [status, setStatus] = useState('connecting');
   const [messages, setMessages] = useState([]);
   const socketRef = useRef(null);
   const shouldReconnectRef = useRef(true);
@@ -25,19 +26,30 @@ export default function useBroadcastSocket({ host, port, token }) {
     const connect = () => {
       shouldReconnectRef.current = true;
       setStatus('connecting');
-      const url = `ws://${host}:${port}?token=${token}`;
-      socket = new WebSocket(url);
+
+      // No token in the URL — it would leak into logs and browser history.
+      socket = new WebSocket(`ws://${host}:${port}`);
       socketRef.current = socket;
 
-      socket.onopen = () => setStatus('open');
+      socket.onopen = () => {
+        // Authenticate as the first message instead.
+        setStatus('authenticating');
+        socket.send(JSON.stringify({ type: 'auth', token }));
+      };
 
       socket.onmessage = (event) => {
+        let msg;
         try {
-          const msg = JSON.parse(event.data);
-          setMessages((prev) => [...prev, msg]);
+          msg = JSON.parse(event.data);
         } catch {
-          // Ignore malformed frames from the server.
+          return;
         }
+
+        // The server's welcome means our token was accepted.
+        if (msg.type === 'welcome') {
+          setStatus('open');
+        }
+        setMessages((prev) => [...prev, msg]);
       };
 
       socket.onclose = () => {

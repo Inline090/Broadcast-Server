@@ -55,9 +55,10 @@ function runConnect() {
   const username = flagValue('--username', 'anonymous');
 
   // Mint a token locally — in a real deployment the server (or an auth
-  // service) would hand this out after a login.
+  // service) would hand this out after a login. The token is sent as the
+  // first message, never in the URL.
   const token = signToken(username);
-  const url = `ws://${host}:${port}?token=${token}`;
+  const url = `ws://${host}:${port}`;
 
   console.log(`Connecting to ${host}:${port} as ${username} (room: ${room})...`);
   console.log('Type a message and press Enter to send. Ctrl+C to quit.\n');
@@ -91,11 +92,8 @@ function runConnect() {
   }
 
   ws.on('open', () => {
-    connected = true;
-    ws.send(JSON.stringify({ type: 'join', room }));
-    while (pending.length) {
-      ws.send(JSON.stringify({ type: 'message', text: pending.shift() }));
-    }
+    // Authenticate first; join once the server accepts the token.
+    ws.send(JSON.stringify({ type: 'auth', token }));
   });
 
   ws.on('message', (data) => {
@@ -104,6 +102,15 @@ function runConnect() {
       msg = JSON.parse(data.toString());
     } catch {
       return;
+    }
+
+    // The welcome means the token was accepted — now join and flush sends.
+    if (msg.type === 'welcome') {
+      connected = true;
+      ws.send(JSON.stringify({ type: 'join', room }));
+      while (pending.length) {
+        ws.send(JSON.stringify({ type: 'message', text: pending.shift() }));
+      }
     }
 
     // History replay is multi-line; print it before the next prompt.

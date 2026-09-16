@@ -11,34 +11,18 @@ const { PORT, MONGODB_URI } = require('./config');
 const server = createHttpServer();
 const wss = new WebSocketServer({ server });
 
-wss.on('connection', (socket, request) => {
-  // Identity comes from the JWT, never from what the client claims.
-  const token = new URL(request.url, 'http://localhost').searchParams.get('token');
-  if (!token) {
-    socket.send(JSON.stringify({ type: 'error', message: 'token is required' }));
+wss.on('connection', (socket) => {
+  // The socket stays unauthenticated until the client sends {type:'auth'}.
+  // The token must never travel in the URL: URLs leak into server logs,
+  // proxy logs, and browser history.
+  let user = null;
+
+  const authTimeout = setTimeout(() => {
+    socket.send(
+      JSON.stringify({ type: 'error', message: 'authentication timeout' })
+    );
     socket.close();
-    return;
-  }
-
-  let user;
-  try {
-    user = verifyToken(token);
-  } catch {
-    socket.send(JSON.stringify({ type: 'error', message: 'invalid token' }));
-    socket.close();
-    return;
-  }
-
-  socket.username = user.username;
-  console.log(`Client connected: ${socket.username}. total=${wss.clients.size}`);
-
-  socket.send(
-    JSON.stringify({
-      type: 'welcome',
-      username: socket.username,
-      message: `Connected to Broadcast Server as ${socket.username}`,
-    })
-  );
+  }, 5000);
 
   socket.on('message', (data) => {
     let msg;
@@ -46,6 +30,37 @@ wss.on('connection', (socket, request) => {
       msg = JSON.parse(data.toString());
     } catch {
       socket.send(JSON.stringify({ type: 'error', message: 'Invalid JSON' }));
+      return;
+    }
+
+    // The first message must authenticate the connection.
+    if (!user) {
+      if (msg.type !== 'auth' || typeof msg.token !== 'string') {
+        socket.send(
+          JSON.stringify({ type: 'error', message: 'authentication required' })
+        );
+        socket.close();
+        return;
+      }
+      try {
+        user = verifyToken(msg.token);
+      } catch {
+        socket.send(JSON.stringify({ type: 'error', message: 'invalid token' }));
+        socket.close();
+        return;
+      }
+      clearTimeout(authTimeout);
+      socket.username = user.username;
+      console.log(
+        `Client authenticated: ${socket.username}. total=${wss.clients.size}`
+      );
+      socket.send(
+        JSON.stringify({
+          type: 'welcome',
+          username: socket.username,
+          message: `Connected to Broadcast Server as ${socket.username}`,
+        })
+      );
       return;
     }
 
@@ -126,8 +141,11 @@ wss.on('connection', (socket, request) => {
   });
 
   socket.on('close', () => {
+    clearTimeout(authTimeout);
     rooms.leave(socket);
-    console.log(`Client disconnected: ${socket.username}. total=${wss.clients.size}`);
+    console.log(
+      `Client disconnected: ${socket.username || 'unauthenticated'}. total=${wss.clients.size}`
+    );
   });
 });
 

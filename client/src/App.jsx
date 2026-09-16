@@ -17,6 +17,17 @@ export default function App() {
     token,
   });
 
+  // Join the chosen room once the socket is open.
+  useEffect(() => {
+    if (status === 'open') {
+      send({ type: 'join', room });
+    }
+  }, [status, room, send]);
+
+  // Collapse connecting/authenticating into one "connecting" label.
+  const displayStatus =
+    status === 'open' ? 'connected' : status === 'closed' ? 'closed' : 'connecting';
+
   async function handleJoin(event) {
     event.preventDefault();
     if (!username.trim()) return;
@@ -41,13 +52,6 @@ export default function App() {
       setJoining(false);
     }
   }
-
-  // Join the chosen room once the socket is open.
-  useEffect(() => {
-    if (status === 'open') {
-      send({ type: 'join', room });
-    }
-  }, [status, room, send]);
 
   if (!token) {
     return (
@@ -82,7 +86,7 @@ export default function App() {
     <main className="chat">
       <header>
         <h1>#{room}</h1>
-        <span className={`status ${status}`}>{status}</span>
+        <span className={`status ${displayStatus}`}>{displayStatus}</span>
       </header>
       <div className="messages">
         {messages.map((msg, i) => {
