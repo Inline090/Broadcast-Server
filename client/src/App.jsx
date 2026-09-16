@@ -22,9 +22,18 @@ export default function App() {
   const processedRef = useRef(0);
   const bottomRef = useRef(null);
 
-  // Join the chosen room once the socket is open.
+  // The join effect needs the latest message count without re-running on every
+  // message, so track it in a ref.
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
+
+  // Join the chosen room once the socket is open. Every (re)connection gets a
+  // fresh history replay from the server, so the feed restarts clean —
+  // otherwise reconnecting would append history it already displayed.
   useEffect(() => {
     if (status === 'open') {
+      processedRef.current = messagesRef.current.length;
+      setFeed([]);
       send({ type: 'join', room });
     }
   }, [status, room, send]);
