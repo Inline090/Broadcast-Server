@@ -40,7 +40,12 @@ export default function App() {
     fresh.forEach((m) => {
       if (m.type === 'history') {
         m.messages.forEach((h) =>
-          items.push({ type: 'message', username: h.username, text: h.text }),
+          items.push({
+            type: 'message',
+            username: h.username,
+            text: h.text,
+            sentAt: h.createdAt,
+          }),
         );
       } else {
         items.push(m);
@@ -108,7 +113,13 @@ export default function App() {
     // message locally for immediate feedback.
     setFeed((prev) => [
       ...prev,
-      { type: 'message', username, text, own: true },
+      {
+        type: 'message',
+        username,
+        text,
+        own: true,
+        sentAt: new Date().toISOString(),
+      },
     ]);
     setDraft('');
   }
@@ -156,7 +167,17 @@ export default function App() {
               const isOwn = item.own || item.username === username;
               return (
                 <div key={i} className={`message ${isOwn ? 'own' : ''}`}>
-                  <span className="author">{item.username}</span>
+                  <span className="meta">
+                    <span className="author">{item.username}</span>
+                    {item.sentAt && (
+                      <span className="time">
+                        {new Date(item.sentAt).toLocaleTimeString([], {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </span>
+                    )}
+                  </span>
                   <span className="text">{item.text}</span>
                 </div>
               );

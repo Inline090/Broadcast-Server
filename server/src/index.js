@@ -191,6 +191,7 @@ wss.on('connection', (socket) => {
       type: 'message',
       username,
       text,
+      sentAt: new Date().toISOString(),
     });
 
     console.log(`[${room}] ${username}: ${text}`);

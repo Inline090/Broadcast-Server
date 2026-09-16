@@ -184,12 +184,22 @@ body {
   background: #d0e8ff;
 }
 
+.message .meta {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+
 .message .author {
-  display: block;
   font-size: 12px;
   font-weight: 600;
   color: #555;
-  margin-bottom: 2px;
+}
+
+.message .time {
+  font-size: 11px;
+  color: #999;
 }
 
 .system {
