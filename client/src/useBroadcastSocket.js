@@ -22,6 +22,7 @@ export default function useBroadcastSocket({ host, port, token }) {
 
     let socket;
     let retryTimer;
+    let retryDelay = 1000;
 
     const connect = () => {
       shouldReconnectRef.current = true;
@@ -32,6 +33,8 @@ export default function useBroadcastSocket({ host, port, token }) {
       socketRef.current = socket;
 
       socket.onopen = () => {
+        // A successful connection resets the backoff for next time.
+        retryDelay = 1000;
         // Authenticate as the first message instead.
         setStatus('authenticating');
         socket.send(JSON.stringify({ type: 'auth', token }));
@@ -55,8 +58,10 @@ export default function useBroadcastSocket({ host, port, token }) {
       socket.onclose = () => {
         setStatus('closed');
         if (shouldReconnectRef.current) {
-          // Naive fixed-interval retry; a later commit adds backoff.
-          retryTimer = setTimeout(connect, 1000);
+          // Exponential backoff: 1s, 2s, 4s, ... capped at 30s, so a server
+          // that is down isn't hammered with a reconnect every second.
+          retryTimer = setTimeout(connect, retryDelay);
+          retryDelay = Math.min(retryDelay * 2, 30000);
         }
       };
 
