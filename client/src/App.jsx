@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import useBroadcastSocket from './useBroadcastSocket';
 
 const HOST = 'localhost';
@@ -10,12 +10,17 @@ export default function App() {
   const [token, setToken] = useState(null);
   const [joining, setJoining] = useState(false);
   const [error, setError] = useState(null);
+  const [draft, setDraft] = useState('');
+  const [feed, setFeed] = useState([]);
 
   const { status, messages, send } = useBroadcastSocket({
     host: HOST,
     port: PORT,
     token,
   });
+
+  const processedRef = useRef(0);
+  const bottomRef = useRef(null);
 
   // Join the chosen room once the socket is open.
   useEffect(() => {
@@ -24,9 +29,45 @@ export default function App() {
     }
   }, [status, room, send]);
 
+  // Fold incoming server events into the display feed. History replays are
+  // expanded into individual messages so late joiners see them inline.
+  useEffect(() => {
+    if (messages.length <= processedRef.current) return;
+    const fresh = messages.slice(processedRef.current);
+    processedRef.current = messages.length;
+
+    const items = [];
+    fresh.forEach((m) => {
+      if (m.type === 'history') {
+        m.messages.forEach((h) =>
+          items.push({ type: 'message', username: h.username, text: h.text })
+        );
+      } else {
+        items.push(m);
+      }
+    });
+    if (items.length) {
+      setFeed((prev) => [...prev, ...items]);
+    }
+  }, [messages]);
+
+  // Latest member list reported by the server.
+  const members = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].type === 'members') return messages[i].usernames;
+    }
+    return [];
+  }, [messages]);
+
   // Collapse connecting/authenticating into one "connecting" label.
   const displayStatus =
     status === 'open' ? 'connected' : status === 'closed' ? 'closed' : 'connecting';
+
+  useEffect(() => {
+    if (bottomRef.current) {
+      bottomRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [feed]);
 
   async function handleJoin(event) {
     event.preventDefault();
@@ -51,6 +92,21 @@ export default function App() {
     } finally {
       setJoining(false);
     }
+  }
+
+  function handleSend(event) {
+    event.preventDefault();
+    const text = draft.trim();
+    if (!text) return;
+
+    send({ type: 'message', text });
+    // The server excludes the sender from broadcasts, so echo our own
+    // message locally for immediate feedback.
+    setFeed((prev) => [
+      ...prev,
+      { type: 'message', username, text, own: true },
+    ]);
+    setDraft('');
   }
 
   if (!token) {
@@ -86,45 +142,64 @@ export default function App() {
     <main className="chat">
       <header>
         <h1>#{room}</h1>
-        <span className={`status ${displayStatus}`}>{displayStatus}</span>
+        <span className={`status ${displayStatus}`}>
+          {displayStatus}
+        </span>
       </header>
-      <div className="messages">
-        {messages.map((msg, i) => {
-          if (msg.type === 'message') {
-            return (
-              <div
-                key={i}
-                className={`message ${msg.username === username ? 'own' : ''}`}
-              >
-                <span className="author">{msg.username}</span>
-                <span className="text">{msg.text}</span>
-              </div>
-            );
-          }
-          if (msg.type === 'system') {
-            return (
-              <div key={i} className="system">
-                {msg.text}
-              </div>
-            );
-          }
-          if (msg.type === 'history') {
-            return (
-              <div key={i} className="system">
-                Loaded {msg.messages.length} earlier messages
-              </div>
-            );
-          }
-          if (msg.type === 'error') {
-            return (
-              <div key={i} className="system error">
-                {msg.message}
-              </div>
-            );
-          }
-          return null;
-        })}
+
+      <div className="body">
+        <div className="messages">
+          {feed.map((item, i) => {
+            if (item.type === 'message') {
+              const isOwn = item.own || item.username === username;
+              return (
+                <div key={i} className={`message ${isOwn ? 'own' : ''}`}>
+                  <span className="author">{item.username}</span>
+                  <span className="text">{item.text}</span>
+                </div>
+              );
+            }
+            if (item.type === 'system') {
+              return (
+                <div key={i} className="system">
+                  {item.text}
+                </div>
+              );
+            }
+            if (item.type === 'error') {
+              return (
+                <div key={i} className="system error">
+                  {item.message}
+                </div>
+              );
+            }
+            return null;
+          })}
+          <div ref={bottomRef} />
+        </div>
+
+        <aside className="members">
+          <h2>In this room</h2>
+          <ul>
+            {members.map((name) => (
+              <li key={name}>{name}</li>
+            ))}
+          </ul>
+        </aside>
       </div>
+
+      <form className="send" onSubmit={handleSend}>
+        <input
+          type="text"
+          placeholder="Type a message..."
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          disabled={status !== 'open'}
+        />
+        <button type="submit" disabled={status !== 'open'}>
+          Send
+        </button>
+      </form>
     </main>
   );
 }
