@@ -169,16 +169,6 @@ wss.on('connection', (socket) => {
   });
 });
 
-async function start() {
-  try {
-    await mongoose.connect(MONGODB_URI);
-    console.log(`Connected to MongoDB at ${MONGODB_URI}`);
-  } catch (err) {
-    console.error('MongoDB connection failed:', err.message);
-    process.exit(1);
-  }
-}
-
 async function shutdown(signal) {
   console.log(`\n${signal} received. Shutting down gracefully...`);
 
