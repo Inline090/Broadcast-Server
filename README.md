@@ -90,6 +90,20 @@ npm run dev:client   # React client on :5173
 Open http://localhost:5173, pick a username and room, and start chatting. Open a
 second browser tab to see live delivery and the member list update.
 
+### Run the whole stack with Docker
+
+```bash
+docker compose up --build
+```
+
+That starts MongoDB, the server on http://localhost:8080, and the client served
+by nginx on http://localhost:5173. Settings can be overridden with environment
+variables, e.g.:
+
+```bash
+JWT_SECRET=a-real-secret docker compose up
+```
+
 ## CLI
 
 ```bash

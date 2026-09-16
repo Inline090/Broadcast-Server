@@ -1,0 +1,30 @@
+services:
+  mongo:
+    image: mongo:7
+    volumes:
+      - mongo-data:/data/db
+
+  server:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    environment:
+      MONGODB_URI: mongodb://mongo:27017/broadcast
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me}
+      PORT: 8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mongo
+
+  client:
+    build:
+      context: .
+      dockerfile: client/Dockerfile
+    ports:
+      - "5173:80"
+    depends_on:
+      - server
+
+volumes:
+  mongo-data:
