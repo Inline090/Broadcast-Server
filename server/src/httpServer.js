@@ -1,5 +1,6 @@
 const http = require('http');
 const { signToken } = require('./auth');
+const { MAX_USERNAME_LENGTH } = require('./config');
 
 // HTTP server exposing:
 //   POST /api/token  -> issue a JWT for a username
@@ -21,6 +22,15 @@ function createHttpServer({ listRooms } = {}) {
           if (!username || typeof username !== 'string') {
             res.writeHead(400, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: 'username is required' }));
+            return;
+          }
+          if (username.length > MAX_USERNAME_LENGTH) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(
+              JSON.stringify({
+                error: `username exceeds ${MAX_USERNAME_LENGTH} characters`,
+              })
+            );
             return;
           }
           const token = signToken(username);

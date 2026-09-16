@@ -5,7 +5,13 @@ const { verifyToken } = require('./auth');
 const { saveMessage, recentMessages } = require('./history');
 const { createHttpServer } = require('./httpServer');
 const rateLimit = require('./rateLimit');
-const { PORT, MONGODB_URI, HEARTBEAT_INTERVAL_MS } = require('./config');
+const {
+  PORT,
+  MONGODB_URI,
+  HEARTBEAT_INTERVAL_MS,
+  MAX_PAYLOAD_BYTES,
+  MAX_MESSAGE_LENGTH,
+} = require('./config');
 
 // Tell every socket in a room who is currently present.
 function broadcastMembers(room) {
@@ -24,7 +30,7 @@ function broadcastMembers(room) {
 // HTTP server handles POST /api/token; the WebSocket server attaches to it so
 // both share one port.
 const server = createHttpServer({ listRooms: rooms.list });
-const wss = new WebSocketServer({ server });
+const wss = new WebSocketServer({ server, maxPayload: MAX_PAYLOAD_BYTES });
 
 wss.on('connection', (socket) => {
   // Liveness for the heartbeat below.
@@ -149,7 +155,24 @@ wss.on('connection', (socket) => {
       return;
     }
 
-    const text = msg.text || '';
+    // Validate before broadcasting or persisting.
+    if (typeof msg.text !== 'string' || msg.text.trim() === '') {
+      socket.send(
+        JSON.stringify({ type: 'error', message: 'text is required' })
+      );
+      return;
+    }
+    if (msg.text.length > MAX_MESSAGE_LENGTH) {
+      socket.send(
+        JSON.stringify({
+          type: 'error',
+          message: `text exceeds ${MAX_MESSAGE_LENGTH} characters`,
+        })
+      );
+      return;
+    }
+
+    const text = msg.text;
     const username = socket.username;
     const room = socket.room;
 
