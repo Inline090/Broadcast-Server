@@ -1,12 +1,17 @@
 const http = require('http');
 const { signToken } = require('./auth');
 
-// HTTP server exposing the token endpoint. The browser client calls
-// POST /api/token to get a JWT, then opens the WebSocket with it — the CLI
-// mints tokens locally because it shares the secret, but a browser cannot,
-// so the server issues them here.
-function createHttpServer() {
+// HTTP server exposing:
+//   POST /api/token  -> issue a JWT for a username
+//   GET  /api/rooms  -> list rooms with their member counts
+function createHttpServer({ listRooms } = {}) {
   return http.createServer((req, res) => {
+    if (req.method === 'GET' && req.url === '/api/rooms') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ rooms: listRooms ? listRooms() : [] }));
+      return;
+    }
+
     if (req.method === 'POST' && req.url === '/api/token') {
       let body = '';
       req.on('data', (chunk) => (body += chunk));

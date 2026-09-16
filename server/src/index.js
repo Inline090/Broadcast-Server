@@ -23,7 +23,7 @@ function broadcastMembers(room) {
 
 // HTTP server handles POST /api/token; the WebSocket server attaches to it so
 // both share one port.
-const server = createHttpServer();
+const server = createHttpServer({ listRooms: rooms.list });
 const wss = new WebSocketServer({ server });
 
 wss.on('connection', (socket) => {

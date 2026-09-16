@@ -35,4 +35,13 @@ function usernames(room) {
   return names;
 }
 
-module.exports = { join, leave, members, usernames };
+// Rooms with their current member counts, for the /api/rooms endpoint.
+function list() {
+  const out = [];
+  rooms.forEach((set, name) => {
+    out.push({ name, members: usernames(name).length });
+  });
+  return out;
+}
+
+module.exports = { join, leave, members, usernames, list };
