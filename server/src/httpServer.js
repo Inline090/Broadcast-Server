@@ -3,10 +3,17 @@ const { signToken } = require('./auth');
 const { MAX_USERNAME_LENGTH } = require('./config');
 
 // HTTP server exposing:
-//   POST /api/token  -> issue a JWT for a username
+//   GET  /health     -> liveness probe
 //   GET  /api/rooms  -> list rooms with their member counts
+//   POST /api/token  -> issue a JWT for a username
 function createHttpServer({ listRooms } = {}) {
   return http.createServer((req, res) => {
+    if (req.method === 'GET' && req.url === '/health') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ status: 'ok' }));
+      return;
+    }
+
     if (req.method === 'GET' && req.url === '/api/rooms') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ rooms: listRooms ? listRooms() : [] }));
