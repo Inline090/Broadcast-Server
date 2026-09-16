@@ -33,6 +33,12 @@ const server = createHttpServer({ listRooms: rooms.list });
 const wss = new WebSocketServer({ server, maxPayload: MAX_PAYLOAD_BYTES });
 
 wss.on('connection', (socket) => {
+  // A socket-level error (oversized frame, protocol violation, reset) must be
+  // caught here — an unhandled 'error' event would crash the whole process.
+  socket.on('error', (err) => {
+    console.error('Socket error:', err.message);
+  });
+
   // Liveness for the heartbeat below.
   socket.isAlive = true;
   socket.on('pong', () => {
