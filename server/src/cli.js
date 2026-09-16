@@ -60,7 +60,9 @@ function runConnect() {
   const token = signToken(username);
   const url = `ws://${host}:${port}`;
 
-  console.log(`Connecting to ${host}:${port} as ${username} (room: ${room})...`);
+  console.log(
+    `Connecting to ${host}:${port} as ${username} (room: ${room})...`,
+  );
   console.log('Type a message and press Enter to send. Ctrl+C to quit.\n');
 
   const ws = new WebSocket(url);

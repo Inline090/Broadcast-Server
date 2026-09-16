@@ -36,7 +36,7 @@ function createHttpServer({ listRooms } = {}) {
             res.end(
               JSON.stringify({
                 error: `username exceeds ${MAX_USERNAME_LENGTH} characters`,
-              })
+              }),
             );
             return;
           }

@@ -25,16 +25,16 @@ is persisted so a client joining late catches up on what it missed.
 
 ## Tech stack
 
-| Layer     | Choice                        | Notes                                                      |
-| --------- | ----------------------------- | ---------------------------------------------------------- |
-| Server    | Node.js                       | I/O-bound workload — a natural fit for WebSockets          |
-| WebSocket | `ws`                          | Raw protocol, so connection tracking and fan-out are ours  |
-| HTTP      | Node `http`                   | Token + rooms endpoints share a port with the WebSocket    |
-| Auth      | `jsonwebtoken` (JWT)          | Stateless sessions; identity travels with each connection  |
-| Storage   | MongoDB + `mongoose`          | Chat history is an append-heavy document workload          |
-| Client    | React 19 + Vite               | Component state for messages, rooms, and connection status |
-| Tests     | Node's built-in `node:test`   | Zero extra dependencies for pure-logic modules             |
-| CI        | GitHub Actions                | Installs, tests, and builds the client on every push       |
+| Layer     | Choice                      | Notes                                                      |
+| --------- | --------------------------- | ---------------------------------------------------------- |
+| Server    | Node.js                     | I/O-bound workload — a natural fit for WebSockets          |
+| WebSocket | `ws`                        | Raw protocol, so connection tracking and fan-out are ours  |
+| HTTP      | Node `http`                 | Token + rooms endpoints share a port with the WebSocket    |
+| Auth      | `jsonwebtoken` (JWT)        | Stateless sessions; identity travels with each connection  |
+| Storage   | MongoDB + `mongoose`        | Chat history is an append-heavy document workload          |
+| Client    | React 19 + Vite             | Component state for messages, rooms, and connection status |
+| Tests     | Node's built-in `node:test` | Zero extra dependencies for pure-logic modules             |
+| CI        | GitHub Actions              | Installs, tests, and builds the client on every push       |
 
 ## Architecture
 
@@ -61,14 +61,14 @@ REST endpoints and the socket share one port. Room membership lives in memory
 
 | File            | Responsibility                                             |
 | --------------- | ---------------------------------------------------------- |
-| `index.js`      | Wires everything: connection lifecycle, auth, join, chat    |
-| `config.js`     | Environment-driven settings with safe development defaults  |
-| `auth.js`       | JWT sign / verify helpers                                   |
-| `rooms.js`      | Room membership: join, leave, member usernames, listing     |
-| `history.js`    | Mongoose model + save / recent-messages queries             |
-| `rateLimit.js`  | Fixed-window per-socket message limiter                     |
-| `httpServer.js` | HTTP routes for token issuance and room listing             |
-| `cli.js`        | `broadcast-server start` and `connect` commands             |
+| `index.js`      | Wires everything: connection lifecycle, auth, join, chat   |
+| `config.js`     | Environment-driven settings with safe development defaults |
+| `auth.js`       | JWT sign / verify helpers                                  |
+| `rooms.js`      | Room membership: join, leave, member usernames, listing    |
+| `history.js`    | Mongoose model + save / recent-messages queries            |
+| `rateLimit.js`  | Fixed-window per-socket message limiter                    |
+| `httpServer.js` | HTTP routes for token issuance and room listing            |
+| `cli.js`        | `broadcast-server start` and `connect` commands            |
 
 ## Getting started
 
@@ -120,11 +120,11 @@ All frames are JSON. The client must authenticate before doing anything else.
 
 **Client → server**
 
-| Message                              | Purpose                          |
-| ------------------------------------ | -------------------------------- |
-| `{"type":"auth","token":"<jwt>"}`    | Required first message           |
-| `{"type":"join","room":"lobby"}`     | Join (or switch) a room          |
-| `{"type":"message","text":"hi"}`     | Send a chat message              |
+| Message                           | Purpose                 |
+| --------------------------------- | ----------------------- |
+| `{"type":"auth","token":"<jwt>"}` | Required first message  |
+| `{"type":"join","room":"lobby"}`  | Join (or switch) a room |
+| `{"type":"message","text":"hi"}`  | Send a chat message     |
 
 **Server → client**
 
@@ -140,19 +140,19 @@ All frames are JSON. The client must authenticate before doing anything else.
 
 ## HTTP endpoints
 
-| Method | Path          | Purpose                                   |
-| ------ | ------------- | ----------------------------------------- |
-| POST   | `/api/token`  | Issue a JWT for `{"username":"alice"}`    |
-| GET    | `/api/rooms`  | List rooms with member counts             |
+| Method | Path         | Purpose                                |
+| ------ | ------------ | -------------------------------------- |
+| POST   | `/api/token` | Issue a JWT for `{"username":"alice"}` |
+| GET    | `/api/rooms` | List rooms with member counts          |
 
 ## Scripts
 
-| Command              | Description                        |
-| -------------------- | ---------------------------------- |
-| `npm run dev`        | Start the server (watch mode)      |
-| `npm run dev:client` | Start the React dev server         |
-| `npm test`           | Run the server unit tests          |
-| `npm run cli -- …`   | Run the CLI (`start` / `connect`)  |
+| Command              | Description                       |
+| -------------------- | --------------------------------- |
+| `npm run dev`        | Start the server (watch mode)     |
+| `npm run dev:client` | Start the React dev server        |
+| `npm test`           | Run the server unit tests         |
+| `npm run cli -- …`   | Run the CLI (`start` / `connect`) |
 
 ## Testing
 
@@ -168,15 +168,15 @@ pure logic — no database or running server required.
 
 All settings are environment variables with development defaults:
 
-| Variable                | Default                                 |
-| ----------------------- | --------------------------------------- |
-| `PORT`                  | `8080`                                  |
-| `JWT_SECRET`            | `dev-secret-change-me`                  |
-| `JWT_EXPIRES_IN`        | `7d`                                    |
-| `MONGODB_URI`           | `mongodb://localhost:27017/broadcast`   |
-| `HEARTBEAT_INTERVAL_MS` | `30000`                                 |
-| `RATE_LIMIT_WINDOW_MS`  | `10000`                                 |
-| `RATE_LIMIT_MAX`        | `20`                                    |
+| Variable                | Default                               |
+| ----------------------- | ------------------------------------- |
+| `PORT`                  | `8080`                                |
+| `JWT_SECRET`            | `dev-secret-change-me`                |
+| `JWT_EXPIRES_IN`        | `7d`                                  |
+| `MONGODB_URI`           | `mongodb://localhost:27017/broadcast` |
+| `HEARTBEAT_INTERVAL_MS` | `30000`                               |
+| `RATE_LIMIT_WINDOW_MS`  | `10000`                               |
+| `RATE_LIMIT_MAX`        | `20`                                  |
 
 Set a real `JWT_SECRET` before deploying anywhere public.
 

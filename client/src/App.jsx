@@ -40,7 +40,7 @@ export default function App() {
     fresh.forEach((m) => {
       if (m.type === 'history') {
         m.messages.forEach((h) =>
-          items.push({ type: 'message', username: h.username, text: h.text })
+          items.push({ type: 'message', username: h.username, text: h.text }),
         );
       } else {
         items.push(m);
@@ -61,7 +61,11 @@ export default function App() {
 
   // Collapse connecting/authenticating into one "connecting" label.
   const displayStatus =
-    status === 'open' ? 'connected' : status === 'closed' ? 'closed' : 'connecting';
+    status === 'open'
+      ? 'connected'
+      : status === 'closed'
+        ? 'closed'
+        : 'connecting';
 
   useEffect(() => {
     if (bottomRef.current) {
@@ -87,7 +91,7 @@ export default function App() {
       }
       const data = await res.json();
       setToken(data.token);
-    } catch (err) {
+    } catch {
       setError('Could not connect to server. Is it running?');
     } finally {
       setJoining(false);
@@ -142,9 +146,7 @@ export default function App() {
     <main className="chat">
       <header>
         <h1>#{room}</h1>
-        <span className={`status ${displayStatus}`}>
-          {displayStatus}
-        </span>
+        <span className={`status ${displayStatus}`}>{displayStatus}</span>
       </header>
 
       <div className="body">

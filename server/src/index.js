@@ -52,7 +52,7 @@ wss.on('connection', (socket) => {
 
   const authTimeout = setTimeout(() => {
     socket.send(
-      JSON.stringify({ type: 'error', message: 'authentication timeout' })
+      JSON.stringify({ type: 'error', message: 'authentication timeout' }),
     );
     socket.close();
   }, 5000);
@@ -71,7 +71,7 @@ wss.on('connection', (socket) => {
     if (!limit.allowed) {
       if (limit.firstWarning) {
         socket.send(
-          JSON.stringify({ type: 'error', message: 'rate limit exceeded' })
+          JSON.stringify({ type: 'error', message: 'rate limit exceeded' }),
         );
       }
       return;
@@ -81,7 +81,7 @@ wss.on('connection', (socket) => {
     if (!user) {
       if (msg.type !== 'auth' || typeof msg.token !== 'string') {
         socket.send(
-          JSON.stringify({ type: 'error', message: 'authentication required' })
+          JSON.stringify({ type: 'error', message: 'authentication required' }),
         );
         socket.close();
         return;
@@ -89,21 +89,23 @@ wss.on('connection', (socket) => {
       try {
         user = verifyToken(msg.token);
       } catch {
-        socket.send(JSON.stringify({ type: 'error', message: 'invalid token' }));
+        socket.send(
+          JSON.stringify({ type: 'error', message: 'invalid token' }),
+        );
         socket.close();
         return;
       }
       clearTimeout(authTimeout);
       socket.username = user.username;
       console.log(
-        `Client authenticated: ${socket.username}. total=${wss.clients.size}`
+        `Client authenticated: ${socket.username}. total=${wss.clients.size}`,
       );
       socket.send(
         JSON.stringify({
           type: 'welcome',
           username: socket.username,
           message: `Connected to Broadcast Server as ${socket.username}`,
-        })
+        }),
       );
       return;
     }
@@ -112,7 +114,7 @@ wss.on('connection', (socket) => {
       const room = typeof msg.room === 'string' ? msg.room : null;
       if (!room) {
         socket.send(
-          JSON.stringify({ type: 'error', message: 'room is required' })
+          JSON.stringify({ type: 'error', message: 'room is required' }),
         );
         return;
       }
@@ -121,9 +123,7 @@ wss.on('connection', (socket) => {
       // Late joiner catch-up: replay recent history for this room.
       recentMessages(room, 50)
         .then((messages) => {
-          socket.send(
-            JSON.stringify({ type: 'history', room, messages })
-          );
+          socket.send(JSON.stringify({ type: 'history', room, messages }));
         })
         .catch((err) => {
           console.error('Failed to load history:', err);
@@ -136,7 +136,7 @@ wss.on('connection', (socket) => {
           room,
           members: memberCount,
           message: `You joined ${room}`,
-        })
+        }),
       );
 
       const payload = JSON.stringify({
@@ -156,7 +156,7 @@ wss.on('connection', (socket) => {
     // Anything else is treated as a chat message scoped to the sender's room.
     if (!socket.room) {
       socket.send(
-        JSON.stringify({ type: 'error', message: 'Join a room first' })
+        JSON.stringify({ type: 'error', message: 'Join a room first' }),
       );
       return;
     }
@@ -164,7 +164,7 @@ wss.on('connection', (socket) => {
     // Validate before broadcasting or persisting.
     if (typeof msg.text !== 'string' || msg.text.trim() === '') {
       socket.send(
-        JSON.stringify({ type: 'error', message: 'text is required' })
+        JSON.stringify({ type: 'error', message: 'text is required' }),
       );
       return;
     }
@@ -173,7 +173,7 @@ wss.on('connection', (socket) => {
         JSON.stringify({
           type: 'error',
           message: `text exceeds ${MAX_MESSAGE_LENGTH} characters`,
-        })
+        }),
       );
       return;
     }
@@ -183,10 +183,9 @@ wss.on('connection', (socket) => {
     const room = socket.room;
 
     // Persist before broadcasting so history is never missing a message.
-    saveMessage(room, username, text)
-      .catch((err) => {
-        console.error('Failed to save message:', err);
-      });
+    saveMessage(room, username, text).catch((err) => {
+      console.error('Failed to save message:', err);
+    });
 
     const payload = JSON.stringify({
       type: 'message',
@@ -208,7 +207,7 @@ wss.on('connection', (socket) => {
     const leftRoom = socket.room;
     rooms.leave(socket);
     console.log(
-      `Client disconnected: ${socket.username || 'unauthenticated'}. total=${wss.clients.size}`
+      `Client disconnected: ${socket.username || 'unauthenticated'}. total=${wss.clients.size}`,
     );
     if (leftRoom) {
       broadcastMembers(leftRoom);

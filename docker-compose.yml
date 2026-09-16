@@ -13,7 +13,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me}
       PORT: 8080
     ports:
-      - "8080:8080"
+      - '8080:8080'
     depends_on:
       - mongo
 
@@ -22,7 +22,7 @@ services:
       context: .
       dockerfile: client/Dockerfile
     ports:
-      - "5173:80"
+      - '5173:80'
     depends_on:
       - server
 

@@ -20,7 +20,7 @@ test('leave removes the socket and deletes the room when empty', () => {
   assert.strictEqual(rooms.usernames('temporary').length, 0);
   assert.strictEqual(
     rooms.list().find((r) => r.name === 'temporary'),
-    undefined
+    undefined,
   );
 });
 
