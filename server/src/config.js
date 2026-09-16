@@ -5,6 +5,8 @@ const MONGODB_URI =
   process.env.MONGODB_URI || 'mongodb://localhost:27017/broadcast';
 const HEARTBEAT_INTERVAL_MS =
   Number(process.env.HEARTBEAT_INTERVAL_MS) || 30000;
+const RATE_LIMIT_WINDOW_MS = Number(process.env.RATE_LIMIT_WINDOW_MS) || 10000;
+const RATE_LIMIT_MAX = Number(process.env.RATE_LIMIT_MAX) || 20;
 
 module.exports = {
   PORT,
@@ -12,4 +14,6 @@ module.exports = {
   JWT_EXPIRES_IN,
   MONGODB_URI,
   HEARTBEAT_INTERVAL_MS,
+  RATE_LIMIT_WINDOW_MS,
+  RATE_LIMIT_MAX,
 };

@@ -4,6 +4,7 @@ const rooms = require('./rooms');
 const { verifyToken } = require('./auth');
 const { saveMessage, recentMessages } = require('./history');
 const { createHttpServer } = require('./httpServer');
+const rateLimit = require('./rateLimit');
 const { PORT, MONGODB_URI, HEARTBEAT_INTERVAL_MS } = require('./config');
 
 // Tell every socket in a room who is currently present.
@@ -50,6 +51,17 @@ wss.on('connection', (socket) => {
       msg = JSON.parse(data.toString());
     } catch {
       socket.send(JSON.stringify({ type: 'error', message: 'Invalid JSON' }));
+      return;
+    }
+
+    // Drop messages once the client exceeds its send rate.
+    const limit = rateLimit.check(socket);
+    if (!limit.allowed) {
+      if (limit.firstWarning) {
+        socket.send(
+          JSON.stringify({ type: 'error', message: 'rate limit exceeded' })
+        );
+      }
       return;
     }
 
