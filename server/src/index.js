@@ -4,7 +4,7 @@ const rooms = require('./rooms');
 const { verifyToken } = require('./auth');
 const { saveMessage, recentMessages } = require('./history');
 const { createHttpServer } = require('./httpServer');
-const { PORT, MONGODB_URI } = require('./config');
+const { PORT, MONGODB_URI, HEARTBEAT_INTERVAL_MS } = require('./config');
 
 // Tell every socket in a room who is currently present.
 function broadcastMembers(room) {
@@ -26,6 +26,12 @@ const server = createHttpServer();
 const wss = new WebSocketServer({ server });
 
 wss.on('connection', (socket) => {
+  // Liveness for the heartbeat below.
+  socket.isAlive = true;
+  socket.on('pong', () => {
+    socket.isAlive = true;
+  });
+
   // The socket stays unauthenticated until the client sends {type:'auth'}.
   // The token must never travel in the URL: URLs leak into server logs,
   // proxy logs, and browser history.
@@ -169,8 +175,23 @@ wss.on('connection', (socket) => {
   });
 });
 
+// Terminate sockets that stop responding to pings. A half-open TCP connection
+// (client lost network) never fires 'close', so without this it lingers forever.
+const heartbeat = setInterval(() => {
+  wss.clients.forEach((socket) => {
+    if (socket.isAlive === false) {
+      console.log('Terminating unresponsive client.');
+      return socket.terminate();
+    }
+    socket.isAlive = false;
+    socket.ping();
+  });
+}, HEARTBEAT_INTERVAL_MS);
+
 async function shutdown(signal) {
   console.log(`\n${signal} received. Shutting down gracefully...`);
+
+  clearInterval(heartbeat);
 
   // Stop accepting new connections, then close every open client socket.
   server.close(() => {
